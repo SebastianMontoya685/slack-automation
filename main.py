@@ -1,70 +1,65 @@
 # import os
 import json
-# import base64
-# import requests
+import base64
+import requests
 from google.cloud import pubsub_v1
 
 # ─── CONFIG ───
 PROJECT_ID    = "avian-cosmos-458703-g3"
 TOPIC_ID      = "Seminar-List-Automation"
-SLACK_WEBHOOK = "https://webhook.site/5297a000-62ea-435d-8530-745122adb05b"
+SLACK_WEBHOOK = "https://hooks.slack.com/triggers/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"
 
+# Pub/Sub publisher client (only used by receive_and_publish)
 publisher  = pubsub_v1.PublisherClient()
 TOPIC_PATH = publisher.topic_path(PROJECT_ID, TOPIC_ID)
 
-# ─── FORM ID TO BRAND MAPPING ───
-# ─── FORM ID TO BRAND MAPPING ───
-FORM_ID_TO_BRAND = {
-    "681ea1dd75c61440f40537c0": "ECE",
-    "681e9dc9d9b9d5e9e10682e6": "TPRA",
-    "681ea2f102d69c6ac50c7478": "JPI",
-    "681eaad5ca75e9229d0aa8e0": "AEAS",
-    "681ea9e8939646b8df09df67": "JPI"
-}
+def process_pubsub_push(request):
+    # 1. Parse the Pub/Sub push envelope
+    envelope = request.get_json(force=True, silent=True)
+    if not envelope or "message" not in envelope:
+        return ("Bad Pub/Sub envelope", 400)
 
-# Extract brand based on form ID
-
-def receive_and_publish(request):
-    if request.method != "POST":
-        return ("Only POST allowed", 405)
-
-    data = request.get_json(force=True, silent=True)
-    if not data:
-        return ("Invalid JSON", 400)
-
-    # Extract values from form data
-    def extract_value(field_title):
-        return next(
-            (item.get("value") for item in data.get("data", [])
-             if item.get("title") == field_title),
-            None
-        )
-
-    name        = extract_value("Name")
-    company     = extract_value("Company")
-    event_name  = extract_value("INPUT: Event Name")
-    event_date  = extract_value("INPUT: Event Date")
-    form_id = data.get("form_id", "").strip()
-    brand = FORM_ID_TO_BRAND.get(form_id, "UNKNOWN")
-    email       = extract_value("Email")
-
-    if not name or not form_id:
-        return ("Missing name or form_id", 400)
-
-    # Construct payload
-    payload = json.dumps({
-        "name": name,
-        "brand": brand,
-        "company": company,
-        "event_name": event_name,
-        "event_date": event_date,
-        "email": email
-    })
+    # 2. Decode the message
+    encoded_data = envelope["message"].get("data")
+    if not encoded_data:
+        return ("Missing data field in Pub/Sub message", 400)
 
     try:
-        publisher.publish(TOPIC_PATH, payload.encode("utf-8"))
+        decoded_data = base64.b64decode(encoded_data).decode("utf-8")
+        parsed = json.loads(decoded_data)
     except Exception as e:
-        print("🔴 Pub/Sub publish failed:", e)
-        return (f"Publish error: {e}", 500)
+        return (f"Error decoding message: {e}", 400)
 
-    return ("Accepted", 202)
+    # 3. Extract required fields
+    name        = parsed.get("name")
+    brand       = parsed.get("brand")
+    company     = parsed.get("johnson")
+    event_name  = parsed.get("event_name")
+    event_date  = parsed.get("event_date")
+    email       = parsed.get("email")
+
+    if not name:
+        return ("Missing required fields", 400)
+
+    # 4. Format the payload for Slack
+    payload = {
+        "Name": name,
+        "Email": email or 'N/A',
+        "Company": company or 'N/A',
+        "Brand": brand,
+        "Event": event_name or 'N/A',
+        "Date": event_date or 'N/A'
+}
+
+    # 5. POST to Slack webhook
+    try:
+        resp = requests.post(SLACK_WEBHOOK, json=payload)
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print("🔴 HTTP error:", e)
+        return (f"Slack HTTP error: {e}", 502)
+    except Exception as e:
+        print("🔴 Slack POST failed:", e)
+        return (f"Slack error: {e}", 502)
+
+    return ("", 204)
