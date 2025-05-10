@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: [
+      'run', 'deploy', 'seminar-transformer',  # <-- your transformer service name
+      '--source', '.',                         # <-- assumes cloudbuild.yaml is in the same folder as main.py
+      '--entry-point', 'process_pubsub_push',  # <-- change if your function has a different name
+      '--runtime', 'python311',
+      '--region', 'us-central1',
+      '--project', 'avian-cosmos-458703-g3',
+      '--allow-unauthenticated'
+    ]

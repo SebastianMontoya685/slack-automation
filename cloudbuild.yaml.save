@@ -1,0 +1,15 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy seminar-transformer \
+          --source . \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --entry-point process_pubsub_push \
+          --runtime python311 \
+          --project avian-cosmos-458703-g3
+
