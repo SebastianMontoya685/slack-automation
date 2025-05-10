@@ -28,12 +28,12 @@ def process_pubsub_push(request):
         decoded_data = base64.b64decode(encoded_data).decode("utf-8")
         parsed = json.loads(decoded_data)
     except Exception as e:
-        return (f"Error decoding message: {e}", 400)
+        return (f"Error decoding many many many messages: {e}", 400)
 
     # 3. Extract required fields
-    name        = parsed.get("jump")
+    name        = parsed.get("name")
     brand       = parsed.get("brand")
-    company     = parsed.get("bond")
+    company     = parsed.get("company")
     event_name  = parsed.get("event_name")
     event_date  = parsed.get("event_date")
     email       = parsed.get("email")
