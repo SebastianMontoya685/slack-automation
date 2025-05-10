@@ -31,8 +31,8 @@ def process_pubsub_push(request):
         return (f"Error decoding message: {e}", 400)
 
     # 3. Extract required fields
-    name        = parsed.get("bird")
-    brand       = parsed.get("car")
+    name        = parsed.get("name")
+    brand       = parsed.get("brand")
     company     = parsed.get("company")
     event_name  = parsed.get("event_name")
     event_date  = parsed.get("event_date")
