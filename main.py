@@ -33,7 +33,7 @@ def process_pubsub_push(request):
     # 3. Extract required fields
     name        = parsed.get("jump")
     brand       = parsed.get("brand")
-    company     = parsed.get("company")
+    company     = parsed.get("bond")
     event_name  = parsed.get("event_name")
     event_date  = parsed.get("event_date")
     email       = parsed.get("email")
